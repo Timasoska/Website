@@ -6,6 +6,7 @@ val exposedVersion = "0.49.0"
 val postgresqlVersion = "42.7.3"
 val jbcryptVersion = "0.4"
 
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
@@ -34,20 +35,39 @@ dependencies {
     implementation(libs.logback.classic)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
-    // Ktor Core & Engine (CIO)
-    implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-cio-jvm:$ktorVersion")
 
-    // Content Negotiation & Serialization
-    implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+    // Ktor Core & Engine (CIO) - Consider removing if using libs aliases consistently
+    // implementation("io.ktor:ktor-server-core-jvm:$ktorVersion") // Already covered by libs.ktor.server.core?
+    // implementation("io.ktor:ktor-server-cio-jvm:$ktorVersion")  // Already covered by libs.ktor.server.cio?
 
-    // Logging
-    implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    // Content Negotiation & Serialization - Consider removing if using libs aliases consistently
+    // implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion") // Covered by libs.ktor.server.content.negotiation?
+    // implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion") // Covered by libs.ktor.serialization.kotlinx.json?
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion") // Keep this if libs alias doesn't cover it
+
+    // Logging - Consider removing if using libs aliases consistently
+    // implementation("ch.qos.logback:logback-classic:$logbackVersion") // Covered by libs.logback.classic?
 
     // Status Pages (для базовой обработки ошибок)
-    implementation("io.ktor:ktor-server-status-pages-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-status-pages-jvm:$ktorVersion") // Add alias for this if desired
+
+    // Exposed
+    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion") // Add aliases for these if desired
+
+    // HikariCP Connection Pool
+    implementation("com.zaxxer:HikariCP:5.1.0") // Keep only one line for HikariCP
+
+    // H2 Driver (Runtime Only is sufficient)
+    runtimeOnly("com.h2database:h2:2.2.224") // Keep only runtimeOnly for the driver
+
+    // or PostgreSQL Driver (Uncomment if you switch)
+    // runtimeOnly("org.postgresql:postgresql:$postgresqlVersion")
+
+    // BCrypt
+    implementation ("at.favre.lib:bcrypt:0.4.1")
+
 }
 
 ktor {
