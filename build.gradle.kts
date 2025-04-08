@@ -59,14 +59,15 @@ dependencies {
     // HikariCP Connection Pool
     implementation("com.zaxxer:HikariCP:5.1.0") // Keep only one line for HikariCP
 
-    // H2 Driver (Runtime Only is sufficient)
-    runtimeOnly("com.h2database:h2:2.2.224") // Keep only runtimeOnly for the driver
-
-    // or PostgreSQL Driver (Uncomment if you switch)
-    // runtimeOnly("org.postgresql:postgresql:$postgresqlVersion")
+    // PostgreSQL Driver (Добавляем!)
+    runtimeOnly("org.postgresql:postgresql:42.7.3") // Используем runtimeOnly, т.к. нужен только во время выполнения
 
     // BCrypt
     implementation ("at.favre.lib:bcrypt:0.4.1")
+    // Тестовые зависимости (оставляем)
+    testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.kotlin.test.junit)
+
 
 }
 
