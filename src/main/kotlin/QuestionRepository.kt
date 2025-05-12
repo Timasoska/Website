@@ -42,12 +42,14 @@ class QuestionRepository {
         }
     }
 
+    // Серверный QuestionRepository.kt
     suspend fun getQuestionByIdAndUserId(questionId: Int, userId: Int): QuestionResponse? {
         return dbQuery {
-            (QuestionsTable innerJoin SubjectsTable)
-                .selectAll().where((QuestionsTable.id eq questionId) and (SubjectsTable.userId eq userId)) // Старый синтаксис select
+            val result = (QuestionsTable innerJoin SubjectsTable)
+                .select { (QuestionsTable.id eq questionId) and (SubjectsTable.userId eq userId) }
                 .mapNotNull { rowToQuestionResponse(it) }
                 .singleOrNull()
+            result
         }
     }
 
@@ -106,4 +108,6 @@ class QuestionRepository {
             subjectId = row[QuestionsTable.subjectId]
         )
     }
+
+
 }

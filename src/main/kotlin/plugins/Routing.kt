@@ -10,13 +10,18 @@ import io.ktor.http.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.ContentTransformationException
 import io.ktor.server.request.*
+import io.ktor.util.logging.*
 import org.jetbrains.exposed.sql.*
+
 
 fun Application.configureRouting() {
 
     val userRepository = UserRepository()
     val subjectRepository = SubjectRepository() // Создаем репозитории
     val questionRepository = QuestionRepository()
+    // Получаем логгер Ktor (или используй SLF4J как в репозитории)
+    val logger = KtorSimpleLogger("com.example.plugins.Routing")
+
 
     routing {
         get("/") {
@@ -41,7 +46,7 @@ fun Application.configureRouting() {
                 } catch (e: ContentTransformationException) {
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(message = "Invalid request body: ${e.localizedMessage}"))
                 } catch (e: Exception) {
-                    application.log.error("Registration failed", e)
+                    application.log.error("Registration failed", e) // Используем application.log, если доступен
                     call.respond(HttpStatusCode.InternalServerError, ErrorResponse(message = "An internal error occurred during registration."))
                 }
             }
@@ -79,9 +84,6 @@ fun Application.configureRouting() {
             }
         } // end /auth
 
-        // --- Эндпоинты для ПРЕДМЕТОВ (Subjects) ---
-        // Предполагаем, что userId передается как query parameter для простоты.
-        // В реальном приложении это был бы ID из JWT токена.
         route("/subjects") {
             // Получить все предметы для пользователя
             get {
@@ -176,17 +178,52 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Error deleting subject."))
                 }
             }
+            // Если нужен эндпоинт для получения ОДНОГО ПРЕДМЕТА по ID, он должен быть здесь:
+            /*
+            get("/{id}") { // Получить один ПРЕДМЕТ по ID
+                val subjectIdParam = call.parameters["id"]?.toIntOrNull()
+                val userId = call.request.queryParameters["userId"]?.toIntOrNull()
+                application.log.info("SERVER: GET /subjects/$subjectIdParam. Received userId query: $userId") // Используй application.log
+
+                if (subjectIdParam == null || userId == null) {
+                    application.log.warn("SERVER: GET /subjects/$subjectIdParam. Missing subjectId or userId.")
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing subjectId or userId parameter."))
+                    return@get
+                }
+                try {
+                    val subject = subjectRepository.getSubjectByIdAndUserId(subjectIdParam, userId)
+                    if (subject != null) {
+                        application.log.info("SERVER: GET /subjects/$subjectIdParam. Found subject: $subject")
+                        call.respond(HttpStatusCode.OK, subject)
+                    } else {
+                        application.log.warn("SERVER: GET /subjects/$subjectIdParam. Subject not found for userId $userId.")
+                        call.respond(HttpStatusCode.NotFound, ErrorResponse("Subject not found or not owned by user."))
+                    }
+                } catch (e: Exception) {
+                    application.log.error("SERVER: GET /subjects/$subjectIdParam. Error: ${e.message}", e)
+                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Error fetching subject."))
+                }
+            }
+            */
         } // end /subjects
 
-        // --- Эндпоинты для ВОПРОСОВ (Questions) ---
         route("/questions") {
-            // Получить все вопросы для конкретного предмета (принадлежащего пользователю)
+            // Получить все вопросы для конкретного предмета
             get {
                 val subjectId = call.request.queryParameters["subjectId"]?.toIntOrNull()
                 val userId = call.request.queryParameters["userId"]?.toIntOrNull()
 
-                if (subjectId == null || userId == null) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing subjectId or userId parameter."))
+                if (subjectId == null) { // Если subjectId нет, это не запрос на список вопросов по предмету
+                    // Этот блок можно оставить пустым, если /questions без subjectId не обрабатывается,
+                    // или вернуть ошибку, если такой запрос не ожидается.
+                    // Если предполагается, что GET /questions?userId=X вернет ВСЕ вопросы пользователя,
+                    // то нужна другая логика. Пока считаем, что нужен subjectId.
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing subjectId parameter for fetching questions list."))
+                    return@get
+                }
+                // Если subjectId есть, то userId тоже должен быть
+                if (userId == null) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing userId parameter when subjectId is present."))
                     return@get
                 }
                 try {
@@ -195,6 +232,32 @@ fun Application.configureRouting() {
                 } catch (e: Exception) {
                     application.log.error("Failed to get questions for subject $subjectId, user $userId", e)
                     call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Error fetching questions."))
+                }
+            }
+
+            // Получить один ВОПРОС по ID
+            get("/{id}") {
+                val questionId = call.parameters["id"]?.toIntOrNull()
+                val userId = call.request.queryParameters["userId"]?.toIntOrNull()
+                application.log.info("SERVER: GET /questions/$questionId. Received userId query: $userId")
+
+                if (questionId == null || userId == null) {
+                    application.log.warn("SERVER: GET /questions/$questionId. Missing questionId or userId.")
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing questionId or userId parameter."))
+                    return@get
+                }
+                try {
+                    val question = questionRepository.getQuestionByIdAndUserId(questionId, userId)
+                    if (question != null) {
+                        application.log.info("SERVER: GET /questions/$questionId. Found question: $question")
+                        call.respond(HttpStatusCode.OK, question)
+                    } else {
+                        application.log.warn("SERVER: GET /questions/$questionId. Question not found for userId $userId.")
+                        call.respond(HttpStatusCode.NotFound, ErrorResponse("Question not found or not owned by user."))
+                    }
+                } catch (e: Exception) {
+                    application.log.error("SERVER: GET /questions/$questionId. Error: ${e.message}", e)
+                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Error fetching question."))
                 }
             }
 
@@ -302,6 +365,5 @@ fun Application.configureRouting() {
                 }
             }
         } // end /questions
-
     } // end routing
 }
