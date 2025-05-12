@@ -1,5 +1,7 @@
 package com.example
 
+import com.example.model.QuestionsTable
+import com.example.model.SubjectsTable
 import com.example.model.UsersTable
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -22,8 +24,8 @@ object DatabaseFactory {
                 exec("SELECT 1")
                 log.info("Database connection successful.")
                 // Создаем таблицу, если она не существует
-                SchemaUtils.create(UsersTable)
-                log.info("Schema initialization complete for UsersTable.")
+                SchemaUtils.create(UsersTable, SubjectsTable, QuestionsTable) // Добавляем новые таблицы
+                log.info("Schema initialization complete for UsersTable, SubjectsTable, QuestionsTable.")
             } catch (e: Exception) {
                 log.error("Database connection or schema initialization failed!", e)
                 // В зависимости от критичности, можно либо остановить приложение, либо продолжить с ошибкой
